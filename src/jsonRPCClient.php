@@ -123,9 +123,10 @@ class jsonRPCClient
 
         if ($this->SSL)
         {
-            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, '2');
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
         }else{
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
         }
         if (!curl_setopt_array($ch, $this->curl_options))
@@ -146,7 +147,9 @@ class jsonRPCClient
             throw new RuntimeException('Unable to connect to '.$this->url . ' Error: ' . curl_error($ch));
         }
         // close the connection
-        curl_close($ch);
+        if (PHP_VERSION_ID < 80000) {
+            curl_close($ch);
+        }
         return $response;
     }
 

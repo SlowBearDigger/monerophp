@@ -51,13 +51,14 @@ class walletRPC
    *
    * @param  string  $host      monero-wallet-rpc hostname               (optional)
    * @param  int     $port      monero-wallet-rpc port                   (optional)
-   * @param  string  $protocol  monero-wallet-rpc protocol (eg. 'http')  (optional)
+   * @param  bool|string|null  $SSL  HTTPS validation or protocol        (optional)
    * @param  string  $user      monero-wallet-rpc username               (optional)
    * @param  string  $password  monero-wallet-rpc passphrase             (optional)
    *
    */
-  function __construct($host = '127.0.0.1', $port = 18081, $SSL = true, $user = null, $password = null)
+  function __construct($host = '127.0.0.1', $port = 18081, $SSL = null, $user = null, $password = null)
   {
+    $protocol = null;
     if (is_array($host)) { // Parameters passed in as object/dictionary
       $params = $host;
 
@@ -70,7 +71,10 @@ class walletRPC
         $port = $params['port'];
       }
       if (array_key_exists('protocol', $params)) {
-        $protocol = $params['protocol'];
+        $protocol = strtolower($params['protocol']);
+      }
+      if (array_key_exists('ssl', $params)) {
+        $SSL = $params['ssl'];
       }
       if (array_key_exists('user', $params)) {
         $user = $params['user'];
@@ -80,10 +84,20 @@ class walletRPC
       }
     }
       
-      if ($SSL) {
-          $protocol = 'https';
-      } else {
-          $protocol = 'http';
+    if (is_string($SSL)) {
+      $protocol = strtolower($SSL);
+      $SSL = null;
+    }
+    if (null === $SSL) {
+      $host_name = strtolower(trim($host, '[]'));
+      $is_loopback = in_array($host_name, array('localhost', '::1'), true)
+        || (false !== filter_var($host_name, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)
+          && 0 === strpos($host_name, '127.'));
+      $SSL = null === $protocol ? !$is_loopback : 'https' === $protocol;
+    }
+    $SSL = (bool) $SSL;
+    if (null === $protocol) {
+      $protocol = $SSL ? 'https' : 'http';
       }
     
     $this->host = $host;
@@ -93,7 +107,8 @@ class walletRPC
     $this->password = $password;
     $this->check_SSL = $SSL;
     
-    $this->url = $protocol.'://'.$host.':'.$port.'/';
+    $host_for_url = false !== strpos($host, ':') && '[' !== $host[0] ? '['.$host.']' : $host;
+    $this->url = $protocol.'://'.$host_for_url.':'.$port.'/';
     $this->client = new jsonRPCClient($this->url, $this->user, $this->password, $this->check_SSL);
   }
 

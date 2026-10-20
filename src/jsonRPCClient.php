@@ -70,11 +70,12 @@ class jsonRPCClient
 
     public function _run($pMethod, $pParams, $path)
     {
-        // check if given params are correct
-        $this->validate(false === is_scalar($pMethod), 'Method name has no scalar value');
-        // send params as an object or an array
-        // Request (method invocation)
-        $request = json_encode(array('jsonrpc' => '2.0', 'method' => $pMethod, 'params' => $pParams));
+        if ('json_rpc' === $path) {
+            $this->validate(false === is_scalar($pMethod), 'Method name has no scalar value');
+            $request = json_encode(array('jsonrpc' => '2.0', 'method' => $pMethod, 'params' => $pParams));
+        } else {
+            $request = json_encode($pParams ?? new \stdClass());
+        }
         // if is_debug mode is true then add url and request to is_debug
         $this->debug('Url: ' . $this->url . "\r\n", false);
         $this->debug('Request: ' . $request . "\r\n", false);
@@ -86,17 +87,21 @@ class jsonRPCClient
         // check if decoding json generated any errors
         $jsonErrorMsg = json_last_error_msg();
         $this->validate( !is_null($jsonErrorMsg) && $jsonErrorMsg !== 'No error' , $jsonErrorMsg . ': ' . $responseMessage);
+        $this->validate(!is_array($responseDecoded), 'Invalid RPC response');
         if (isset($responseDecoded['error']))
         {
-            $errorMessage = 'Request have return error: ' . $responseDecoded['error']['message'] . '; ' . "\n" .
-                'Request: ' . $request . '; ';
+            $errorMessage = 'Request have return error: ' . $responseDecoded['error']['message'] . '; ';
             if (isset($responseDecoded['error']['data']))
             {
                 $errorMessage .= "\n" . 'Error data: ' . $responseDecoded['error']['data'];
             }
             $this->validate( !is_null($responseDecoded['error']), $errorMessage);
         }
-        return $responseDecoded['result'] ?? -1;
+        if ('json_rpc' === $path) {
+            $this->validate(!array_key_exists('result', $responseDecoded), 'Missing RPC result');
+            return $responseDecoded['result'];
+        }
+        return $responseDecoded;
     }
 
     protected function & getResponse(&$pRequest, &$path)

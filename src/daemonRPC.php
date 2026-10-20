@@ -167,7 +167,7 @@ class daemonRPC
   {
     $params = array('wallet_address' => $wallet_address, 'reserve_size' => $reserve_size);
 
-    return $this->client->_run('getblocktemplate', $params, null);
+    return $this->_run('getblocktemplate', $params);
   }
 
   /**
@@ -181,7 +181,7 @@ class daemonRPC
    */
   public function submitblock($block)
   {
-    return $this->_run('submitblock', $block);
+    return $this->_run('submitblock', is_array($block) ? $block : array($block));
   }
 
   /**
@@ -270,7 +270,7 @@ class daemonRPC
    */
   public function getblockheaderbyheight($height)
   {
-    return $this->_run('getblockheaderbyheight', $height);
+    return $this->_run('getblockheaderbyheight', array('height' => $height));
   }
 
   /**
@@ -546,7 +546,7 @@ class daemonRPC
     public function get_transactions($txs_hashes = NULL)
     {
         $params = array('txs_hashes' => $txs_hashes, 'decode_as_json' => true);
-        return $this->_run(null, null, 'gettransactions');
+        return $this->_run(null, $params, 'gettransactions');
     }
     
   
@@ -573,7 +573,7 @@ class daemonRPC
         return $this->_run(null, $params, 'send_raw_transaction');
     }
     
-    public function start_mining($background_mining, $ignore_battery = false, $miner_address, $threads_count = 1)
+    public function start_mining($background_mining, $ignore_battery, $miner_address, $threads_count = 1)
     {
         if($threads_count < 0){
             throw new Exception('Error: threads_count must be a positive integer');
@@ -672,7 +672,7 @@ class daemonRPC
     public function get_outs($outputs)
     {
         $params = array('outputs' => $outputs);
-        return $this->_run(null, null, 'get_outs');
+        return $this->_run(null, $params, 'get_outs');
     }
 
 }

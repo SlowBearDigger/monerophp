@@ -179,13 +179,18 @@ class walletRPC
     if ($amount < 0) {
       throw new \InvalidArgumentException('Amount out of range');
     }
+    $multiplier = '1000000000000';
     if (is_float($amount)) {
       if (!is_finite($amount)) {
         throw new \InvalidArgumentException('Invalid amount');
       }
-      $amount = sprintf('%.12F', $amount);
+      $amount = str_replace(localeconv()['decimal_point'], '.', (string) $amount);
+      if (stripos($amount, 'e') !== false) {
+        [$amount, $exponent] = explode('e', strtolower($amount));
+        $multiplier = bcpow('10', (string) (12 + (int) $exponent), 0);
+      }
     }
-    $amount = bcmul($amount, '1000000000000', 0);
+    $amount = bcmul($amount, $multiplier, 0);
     if (bccomp($amount, '0', 0) < 0 || bccomp($amount, (string) PHP_INT_MAX, 0) > 0) {
       throw new \InvalidArgumentException('Amount out of range');
     }

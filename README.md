@@ -23,8 +23,11 @@ Documentation can be found in the [`/docs`](https://github.com/sneurlax/moneroph
 ### Requirements
  - Monero daemon (`monerod`)
  - Webserver with PHP, for example XMPP, Apache, or NGINX
+    - PHP 7.3 or newer
     - cURL PHP extension for JSON RPC API(s)
-    - GMP PHP extension for about 100x faster calculations (as opposed to BCMath)
+    - BCMath PHP extension for arbitrary-precision calculations
+    - Mbstring PHP extension for mnemonic wordsets
+    - Optional GMP PHP extension for about 100x faster calculations
 
 Debian (or Ubuntu) are recommended.
  

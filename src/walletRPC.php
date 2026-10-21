@@ -32,6 +32,7 @@
 namespace MoneroIntegrations\MoneroPhp;
 
 use Exception;
+use InvalidArgumentException;
 
 class walletRPC
 {
@@ -124,6 +125,22 @@ class walletRPC
    */
   private function _run($method, $params = null, $path = 'json_rpc')
   {
+    if (is_array($params) && array_key_exists('subaddr_indices', $params)) {
+      $indices = $params['subaddr_indices'];
+      if ('' === $indices || null === $indices) {
+        $indices = array();
+      } elseif (!is_array($indices)) {
+        $indices = explode(',', (string) $indices);
+      }
+      $params['subaddr_indices'] = array();
+      foreach ($indices as $index) {
+        $index = filter_var($index, FILTER_VALIDATE_INT, array('options' => array('min_range' => 0)));
+        if (false === $index) {
+          throw new InvalidArgumentException('subaddr_indices must contain non-negative integers');
+        }
+        $params['subaddr_indices'][] = $index;
+      }
+    }
     $result = $this->client->_run($method, $params, $path);
     return $result;
   }
@@ -153,7 +170,26 @@ class walletRPC
    */
   public function _transform($amount = 0)
   {
-    return intval(bcmul($amount, 1000000000000));
+    if (!is_int($amount) && !is_float($amount) && !is_string($amount)) {
+      throw new InvalidArgumentException('Invalid amount');
+    }
+    if (is_string($amount) && preg_match('/\A[+-]?(?:[0-9]+\.?[0-9]*|\.[0-9]+)\z/', $amount) !== 1) {
+      throw new InvalidArgumentException('Invalid amount');
+    }
+    if ($amount < 0) {
+      throw new \InvalidArgumentException('Amount out of range');
+    }
+    if (is_float($amount)) {
+      if (!is_finite($amount)) {
+        throw new \InvalidArgumentException('Invalid amount');
+      }
+      $amount = sprintf('%.12F', $amount);
+    }
+    $amount = bcmul($amount, '1000000000000', 0);
+    if (bccomp($amount, '0', 0) < 0 || bccomp($amount, (string) PHP_INT_MAX, 0) > 0) {
+      throw new \InvalidArgumentException('Amount out of range');
+    }
+    return (int) $amount;
   }
 
   /**
@@ -189,7 +225,7 @@ class walletRPC
    * Look up wallet address(es)
    *
    * @param  number  $account_index  Index of account to look up     (optional)
-   * @param  number  $address_index  Index of subaddress to look up  (optional)
+   * @param  number|array|null  $address_index  Subaddress index or indices; all when null  (optional)
    *
    * @return object  Example: {
    *   "address": "A2XE6ArhRkVZqepY2DQ5QpW8p8P2dhDQLhPJ9scSkW6q9aYUHhrhXVvE8sjg7vHRx2HnRv53zLQH4ATSiHHrDzcSFqHpARF",
@@ -211,6 +247,11 @@ class walletRPC
    */
   public function get_address($account_index = 0, $address_index = 0)
   {
+    if (null === $address_index) {
+      $address_index = array();
+    } elseif (!is_array($address_index)) {
+      $address_index = array($address_index);
+    }
     $params = array('account_index' => $account_index, 'address_index' => $address_index);
     return $this->_run('get_address', $params);
   }
@@ -234,7 +275,7 @@ class walletRPC
    * Alias of get_address()
    *
    * @param  number  $account_index  Index of account to look up     (optional)
-   * @param  number  $address_index  Index of subaddress to look up  (optional)
+   * @param  number|array|null  $address_index  Subaddress index or indices; all when null  (optional)
    *
    * @return object  Example: {
    *   "address": "427ZuEhNJQRXoyJAeEoBaNW56ScQaLXyyQWgxeRL9KgAUhVzkvfiELZV7fCPBuuB2CGuJiWFQjhnhhwiH1FsHYGQGaDsaBA"
@@ -243,7 +284,7 @@ class walletRPC
    */
   public function getaddress($account_index = 0, $address_index = 0)
   {
-    return $this->get_address($account_index = 0, $address_index = 0);
+    return $this->get_address($account_index, $address_index);
   }
 
   /**
@@ -583,13 +624,12 @@ class walletRPC
           throw new Exception('Error: destinations must be an array');
         }
 
-        foreach ($destinations as $destination) {
-          if (array_key_exists('amount', $destinations[$destination])) {
-            $destinations[$destination]['amount'] = $this->_transform($destinations[$destination]['amount']);
-          } else {
+        foreach ($destinations as $index => $destination) {
+          if (!is_array($destination) || !array_key_exists('amount', $destination)) {
             throw new Exception('Error: Amount required');
           }
-          if (!array_key_exists('address', $destinations[$destination])) {
+          $destinations[$index]['amount'] = $this->_transform($destination['amount']);
+          if (!array_key_exists('address', $destination)) {
             throw new Exception('Error: Address required');
           }
         }
@@ -631,7 +671,7 @@ class walletRPC
       $destinations = array(array('amount' => $this->_transform($amount), 'address' => $address));
     }
 
-    $params = array('destinations' => $destinations, 'mixin' => $mixin, 'get_tx_key' => true, 'account_index' => $account_index, 'subaddr_indices' => $subaddr_indices, 'payment_id' => $payment_id, 'priority' => $priority, 'unlock_time' => $unlock_time, 'do_not_relay' => $do_not_relay);
+    $params = array('destinations' => $destinations, 'mixin' => $mixin, 'get_tx_keys' => true, 'account_index' => $account_index, 'subaddr_indices' => $subaddr_indices, 'payment_id' => $payment_id, 'priority' => $priority, 'unlock_time' => $unlock_time, 'do_not_relay' => $do_not_relay);
     $transfer_method = $this->_run('transfer_split', $params);
 
     $save = $this->store(); // Save wallet state after transfer
@@ -788,9 +828,6 @@ class walletRPC
       if (array_key_exists('mixin', $params)) {
         $mixin = $params['mixin'];
       }
-      if (array_key_exists('account_index', $params)) {
-        $account_index = $params['account_index'];
-      }
       if (array_key_exists('priority', $params)) {
         $priority = $params['priority'];
       }
@@ -805,7 +842,7 @@ class walletRPC
       }
     }
 
-    $params = array('address' => $address, 'mixin' => $mixin, 'get_tx_key' => true, 'account_index' => $account_index, 'payment_id' => $payment_id, 'priority' => $priority, 'below_amount' => $this->_transform($below_amount), 'unlock_time' => $unlock_time, 'do_not_relay' => $do_not_relay);
+    $params = array('key_image' => $key_image, 'address' => $address, 'mixin' => $mixin, 'get_tx_key' => true, 'payment_id' => $payment_id, 'priority' => $priority, 'below_amount' => $this->_transform($below_amount), 'unlock_time' => $unlock_time, 'do_not_relay' => (bool) $do_not_relay);
     $sweep_single_method = $this->_run('sweep_single', $params);
 
     $save = $this->store(); // Save wallet state after transfer
@@ -825,11 +862,11 @@ class walletRPC
   public function relay_tx($hex)
   {
     $params = array('hex' => $hex);
-    $relay_tx_method = $this->_run('relay_tx_method', $params);
+    $relay_tx_method = $this->_run('relay_tx', $params);
 
     $save = $this->store(); // Save wallet state after transaction relay
 
-    return $this->_run('relay_tx');
+    return $relay_tx_method;
   }
 
   /**
@@ -903,6 +940,7 @@ class walletRPC
         $params['payment_ids'][] = $payment_id;
       }
     }
+    $params['min_block_height'] = $min_block_height;
     return $this->_run('get_bulk_payments', $params);
   }
 
@@ -1263,22 +1301,24 @@ class walletRPC
    *
    * Create proof of reserves
    *
-   * @param  string  $account_index  Comma-separated list of account indices of which to prove reserves (proves reserve of all accounts if empty)  (optional)
+   * @param  int|string  $account_index  Account index, or 'all' for all accounts  (optional)
+   * @param  string      $amount         Minimum amount of monero to prove         (optional)
    *
    * @return   Example: {
    *   "signature": "ReserveProofV11BZ23sBt9sZJeGccf84mzyAmNCP3KzYbE111111111111AjsVgKzau88VxXVGACbYgPVrDGC84vBU61Gmm2eiYxdZULAE4yzBxT1D9epWgCT7qiHFvFMbdChf3CpR2YsZj8CEhp8qDbitsfdy7iBdK6d5pPUiMEwCNsCGDp8AiAc6sLRiuTsLEJcfPYEKe"
    * }
    *
    */
-  public function get_reserve_proof($account_index = 'all')
+  public function get_reserve_proof($account_index = 'all', $amount = 0)
   {
-    if ($account_index == 'all') {
-      $params = array('all' => true);
-    } else {
-      $params = array('account_index' => $account_index);
-    }
+    $all = 'all' === $account_index;
+    $params = array(
+      'all' => $all,
+      'account_index' => $all ? 0 : $account_index,
+      'amount' => $this->_transform($amount)
+    );
 
-    return $this->_run('get_reserve_proof');
+    return $this->_run('get_reserve_proof', $params);
   }
 
   /**
@@ -1378,7 +1418,7 @@ class walletRPC
       $params['pool'] = true;
     }
 
-    if (($min_height || $max_height) && $max_height != 4206931337) {
+    if ($min_height || $max_height != 4206931337) {
       $params['filter_by_height'] = true;
     }
 
@@ -1425,7 +1465,7 @@ class walletRPC
    */
   public function sign($data)
   {
-    $params = array('string' => $data);
+    $params = array('data' => $data);
     return $this->_run('sign', $params);
   }
 

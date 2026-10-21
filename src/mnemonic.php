@@ -41,7 +41,13 @@ class mnemonic {
      */
     static function checksum($words, $prefix_len) {
         $plen = $prefix_len;
-        $words = array_slice($words, 0, count($words) > 13 ? 24 : 12);
+        $word_count = count($words);
+        if ($word_count < 3 || $word_count % 3 === 2) {
+            throw new \InvalidArgumentException('Invalid mnemonic length');
+        }
+        if ($word_count % 3 === 1) {
+            $words = array_slice($words, 0, -1);
+        }
         
         $wstr = '';
         foreach($words as $word) {
@@ -58,7 +64,7 @@ class mnemonic {
      * Returns boolean value.
      */
     static function validate_checksum($words, $prefix_len) {
-        if (!in_array(count($words), [13, 25], true)) {
+        if (count($words) < 4 || count($words) % 3 !== 1) {
             return false;
         }
         $expected = self::checksum($words, $prefix_len);
@@ -146,7 +152,8 @@ class mnemonic {
         $tw = $wordset['trunc_words'];
         $wcount = count($tw);
 
-        if (!in_array(count($wlist), $plen > 0 ? [13, 25] : [12, 13, 24, 25], true)) {
+        $word_count = count($wlist);
+        if ($word_count < 3 || $word_count % 3 === 2 || ($plen > 0 && $word_count % 3 !== 1)) {
             throw new \Exception("invalid mnemonic length");
         }
         if (count($wlist) % 3 === 1 && !self::validate_checksum($wlist, $plen)) {

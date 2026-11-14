@@ -98,7 +98,7 @@ use kornrunner\Keccak as keccak;
         {
             $integer = $this->ed25519->decodeint(hex2bin($input));
 
-            $modulo = bcmod($integer , $this->ed25519->l);
+            $modulo = bcmod($integer , $this->ed25519->l, 0);
 
             $result = bin2hex($this->ed25519->encodeint($modulo));
             return $result;

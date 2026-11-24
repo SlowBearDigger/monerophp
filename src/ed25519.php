@@ -85,9 +85,9 @@ class ed25519
                 $mod = gmp_add($mod, $m);
             }
         } else {
-            $mod = bcmod($x, $m);
+            $mod = bcmod($x, $m, 0);
             if ($mod < 0) {
-                $mod = bcadd($mod, $m);
+                $mod = bcadd($mod, $m, 0);
             }
         }
 
@@ -103,9 +103,9 @@ class ed25519
                 $t = gmp_add($t, $m);
             }
         } else {
-            $t = bcpowmod($b, $e, $m);
+            $t = bcpowmod($b, $e, $m, 0);
             if ($t[0] === '-') {
-                $t = bcadd($t, $m);
+                $t = bcadd($t, $m, 0);
             }
         }
 
@@ -117,7 +117,7 @@ class ed25519
         if ($this->gmp) {
             return $this->expmod($x, gmp_sub($this->q, 2), $this->q);
         } else {
-            return $this->expmod($x, bcsub($this->q, 2), $this->q);
+            return $this->expmod($x, bcsub($this->q, 2, 0), $this->q);
         }
     }
 
@@ -134,14 +134,14 @@ class ed25519
                 $x = gmp_sub($this->q, $x);
             }
         } else {
-            $y2 = bcpow($y, 2);
-            $xx = bcmul(bcsub($y2, 1), $this->inv(bcadd(bcmul($this->d, $y2), 1)));
-            $x = $this->expmod($xx, bcdiv(bcadd($this->q, 3), 8, 0), $this->q);
-            if ($this->pymod(bcsub(bcpow($x, 2), $xx), $this->q) != 0) {
-                $x = $this->pymod(bcmul($x, $this->I), $this->q);
+            $y2 = bcpow($y, 2, 0);
+            $xx = bcmul(bcsub($y2, 1, 0), $this->inv(bcadd(bcmul($this->d, $y2, 0), 1, 0)), 0);
+            $x = $this->expmod($xx, bcdiv(bcadd($this->q, 3, 0), 8, 0), $this->q);
+            if ($this->pymod(bcsub(bcpow($x, 2, 0), $xx, 0), $this->q) != 0) {
+                $x = $this->pymod(bcmul($x, $this->I, 0), $this->q);
             }
             if (substr($x, -1)%2 != 0) {
-                $x = bcsub($this->q, $x);
+                $x = bcsub($this->q, $x, 0);
             }
         }
 
@@ -163,11 +163,11 @@ class ed25519
         } else {
             list($x1, $y1) = $P;
             list($x2, $y2) = $Q;
-            $xmul = bcmul($x1, $x2);
-            $ymul = bcmul($y1, $y2);
-            $com = bcmul($this->d, bcmul($xmul, $ymul));
-            $x3 = bcmul(bcadd(bcmul($x1, $y2), bcmul($x2, $y1)), $this->inv(bcadd(1, $com)));
-            $y3 = bcmul(bcadd($ymul, $xmul), $this->inv(bcsub(1, $com)));
+            $xmul = bcmul($x1, $x2, 0);
+            $ymul = bcmul($y1, $y2, 0);
+            $com = bcmul($this->d, bcmul($xmul, $ymul, 0), 0);
+            $x3 = bcmul(bcadd(bcmul($x1, $y2, 0), bcmul($x2, $y1, 0), 0), $this->inv(bcadd(1, $com, 0)), 0);
+            $y3 = bcmul(bcadd($ymul, $xmul, 0), $this->inv(bcsub(1, $com, 0)), 0);
 
             return array($this->pymod($x3, $this->q), $this->pymod($y3, $this->q));
         }
@@ -267,7 +267,7 @@ class ed25519
             do {
                 $binary_i = substr($decimal_i, -1)%2 .$binary_i;
                 $decimal_i = bcdiv($decimal_i, '2', 0);
-            } while (bccomp($decimal_i, '0'));
+            } while (bccomp($decimal_i, '0', 0));
         }
 
         return ($binary_i);
@@ -320,9 +320,9 @@ class ed25519
             $h = $this->H($sk);
             $sum = 0;
             for ($i = 3; $i < $this->b-2; $i++) {
-                $sum = bcadd($sum, bcmul(bcpow(2, $i), $this->bit($h, $i)));
+                $sum = bcadd($sum, bcmul(bcpow(2, $i, 0), $this->bit($h, $i), 0), 0);
             }
-            $a = bcadd(bcpow(2, $this->b-2), $sum);
+            $a = bcadd(bcpow(2, $this->b-2, 0), $sum, 0);
             $A = $this->scalarmult($this->B, $a);
             $data = $this->encodepoint($A);
         }
@@ -342,7 +342,7 @@ class ed25519
             $h = $this->H($m);
             $sum = 0;
             for ($i = 0; $i < $this->b*2; $i++) {
-                $sum = bcadd($sum, bcmul(bcpow(2, $i), $this->bit($h, $i)));
+                $sum = bcadd($sum, bcmul(bcpow(2, $i, 0), $this->bit($h, $i), 0), 0);
             }
         }
 
@@ -363,14 +363,14 @@ class ed25519
             $S = $this->pymod(gmp_add($r, gmp_mul($this->Hint($encR.$pk.$m), $a)), $this->l);
         } else {
             $h = $this->H($sk);
-            $a = bcpow(2, (bcsub($this->b, 2)));
+            $a = bcpow(2, (bcsub($this->b, 2, 0)), 0);
             for ($i = 3; $i < $this->b-2; $i++) {
-                $a = bcadd($a, bcmul(bcpow(2, $i), $this->bit($h, $i)));
+                $a = bcadd($a, bcmul(bcpow(2, $i, 0), $this->bit($h, $i), 0), 0);
             }
             $r = $this->Hint(substr($h, $this->b/8, ($this->b/4-$this->b/8)).$m);
             $R = $this->scalarmult($this->B, $r);
             $encR = $this->encodepoint($R);
-            $S = $this->pymod(bcadd($r, bcmul($this->Hint($encR.$pk.$m), $a)), $this->l);
+            $S = $this->pymod(bcadd($r, bcmul($this->Hint($encR.$pk.$m), $a, 0), 0), $this->l);
         }
 
         return $encR.$this->encodeint($S);
@@ -386,10 +386,10 @@ class ed25519
             return $this->pymod(gmp_sub(gmp_sub(gmp_sub($y2, $x2), 1), gmp_mul($this->d, gmp_mul($x2, $y2))), $this->q) == 0;
         } else {
             list($x, $y) = $P;
-            $x2 = bcpow($x, 2);
-            $y2 = bcpow($y, 2);
+            $x2 = bcpow($x, 2, 0);
+            $y2 = bcpow($y, 2, 0);
 
-            return $this->pymod(bcsub(bcsub(bcsub($y2, $x2), 1), bcmul($this->d, bcmul($x2, $y2))), $this->q) == 0;
+            return $this->pymod(bcsub(bcsub(bcsub($y2, $x2, 0), 1, 0), bcmul($this->d, bcmul($x2, $y2, 0), 0), 0), $this->q) == 0;
         }
     }
 
@@ -403,7 +403,7 @@ class ed25519
         } else {
             $sum = 0;
             for ($i = 0; $i < $this->b; $i++) {
-                $sum = bcadd($sum, bcmul(bcpow(2, $i), $this->bit($s, $i)));
+                $sum = bcadd($sum, bcmul(bcpow(2, $i, 0), $this->bit($s, $i), 0), 0);
             }
         }
 
@@ -438,11 +438,11 @@ class ed25519
         } else {
             $y = 0;
             for ($i = 0; $i < $this->b-1; $i++) {
-                $y = bcadd($y, bcmul(bcpow(2, $i), $this->bit($s, $i)));
+                $y = bcadd($y, bcmul(bcpow(2, $i, 0), $this->bit($s, $i), 0), 0);
             }
             $x = $this->xrecover($y);
             if (substr($x, -1)%2 != $this->bit($s, $this->b-1)) {
-                $x = bcsub($this->q, $x);
+                $x = bcsub($this->q, $x, 0);
             }
             $P = array($x, $y);
             if (!$this->isoncurve($P)) {

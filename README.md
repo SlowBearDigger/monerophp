@@ -19,7 +19,7 @@ In addition to these features, there are other lower-level libraries included fo
 
 Documentation can be found in the [`/docs`](https://github.com/sneurlax/monerophp/tree/master/docs) folder.
 
-RPC responses and decoded block-header timestamps retain integers outside PHP's native range as decimal strings; in-range integers remain PHP integers. RPC debug output includes only byte counts, timing and memory usage.
+RPC responses and decoded block-header timestamps retain integers outside PHP's native range as decimal strings; in-range integers remain PHP integers. RPC debug output includes only byte counts, timing and memory usage. RPC exception messages report the numeric server error code when available. JSON and transport errors use local diagnostic text to keep response bodies, remote messages and URLs out of the exception message.
 
 Subaddress index `(0, 0)` returns the primary address. Address decoding checks the known prefix, exact payload length and checksum; it does not validate curve points or ownership. Transaction-extra key extraction returns the first complete primary public-key field, or `null` when no key can be read.
 

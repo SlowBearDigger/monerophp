@@ -42,7 +42,7 @@ class subaddress
 		if($this->gmp)
 			$modulo = gmp_mod($integer , $this->ed25519->l);
 		else
-			$modulo = bcmod($integer , $this->ed25519->l);
+			$modulo = bcmod($integer, $this->ed25519->l, 0);
 		$result = bin2hex($this->ed25519->encodeint($modulo));
 		return $result;
 	}

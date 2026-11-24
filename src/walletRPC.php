@@ -233,23 +233,10 @@ class walletRPC
    * @param  number  $account_index  Index of account to look up     (optional)
    * @param  number|array|null  $address_index  Subaddress index or indices; all when null  (optional)
    *
-   * @return object  Example: {
-   *   "address": "A2XE6ArhRkVZqepY2DQ5QpW8p8P2dhDQLhPJ9scSkW6q9aYUHhrhXVvE8sjg7vHRx2HnRv53zLQH4ATSiHHrDzcSFqHpARF",
-   *   "addresses": [
-   *     {
-   *       "address": "A2XE6ArhRkVZqepY2DQ5QpW8p8P2dhDQLhPJ9scSkW6q9aYUHhrhXVvE8sjg7vHRx2HnRv53zLQH4ATSiHHrDzcSFqHpARF",
-   *       "address_index": 0,
-   *       "label": "Primary account",
-   *       "used": true
-   *     }, {
-   *       "address": "Bh3ttLbjGFnVGCeGJF1HgVh4DfCaBNpDt7PQAgsC2GFug7WKskgfbTmB6e7UupyiijiHDQPmDC7wSCo9eLoGgbAFJQaAaDS",
-   *       "address_index": 1,
-   *       "label": "",
-   *       "used": true
-   *     }
-   *   ]
+   * @return array{
+   *     address: string,
+   *     addresses: array<int, array{address: string, address_index: int, label: string, used: bool}>
    * }
-   *
    */
   public function get_address($account_index = 0, $address_index = 0)
   {
@@ -262,15 +249,10 @@ class walletRPC
     return $this->_run('get_address', $params);
   }
 
-    /**
-     * @param string $address Monero address
-     * @return object Example: {
-    * "index": {
-    * "major": 0,
-    * "minor": 1
-    * }
-    * }
-     */
+  /**
+   * @param string $address Monero address
+   * @return array{index: array{major: int, minor: int}}
+   */
   public function get_address_index($address){
       $params = array('address' => $address);
       return $this->_run('get_address_index', $params);
@@ -283,10 +265,10 @@ class walletRPC
    * @param  number  $account_index  Index of account to look up     (optional)
    * @param  number|array|null  $address_index  Subaddress index or indices; all when null  (optional)
    *
-   * @return object  Example: {
-   *   "address": "427ZuEhNJQRXoyJAeEoBaNW56ScQaLXyyQWgxeRL9KgAUhVzkvfiELZV7fCPBuuB2CGuJiWFQjhnhhwiH1FsHYGQGaDsaBA"
+   * @return array{
+   *     address: string,
+   *     addresses: array<int, array{address: string, address_index: int, label: string, used: bool}>
    * }
-   *
    */
   public function getaddress($account_index = 0, $address_index = 0)
   {

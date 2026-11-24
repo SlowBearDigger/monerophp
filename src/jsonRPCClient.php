@@ -83,24 +83,15 @@ class jsonRPCClient
         $this->debug('Response bytes: ' . strlen($responseMessage) . "\r\n", true);
         // decode and create array ( can be object, just set to false )
         $responseDecoded = json_decode($responseMessage, true, 512, JSON_BIGINT_AS_STRING);
-        // check if decoding json generated any errors
-        $jsonErrorMsg = json_last_error_msg();
-        $this->validate( !is_null($jsonErrorMsg) && $jsonErrorMsg !== 'No error' , $jsonErrorMsg . ': ' . $responseMessage);
+        $this->validate(json_last_error() !== JSON_ERROR_NONE, 'Invalid RPC response: ' . json_last_error_msg());
         $this->validate(!is_array($responseDecoded), 'Invalid RPC response');
         if (isset($responseDecoded['error']))
         {
             $error = $responseDecoded['error'];
             $this->validate(!is_array($error) || !isset($error['message']) || !is_string($error['message']), 'Invalid RPC error');
-            $errorMessage = 'Request have return error: ' . $error['message'] . '; ';
-            if (isset($error['data']))
-            {
-                $errorData = $error['data'];
-                if (is_array($errorData))
-                {
-                    $errorData = json_encode($errorData);
-                    $this->validate(false === $errorData, 'Unable to encode RPC error data: ' . json_last_error_msg());
-                }
-                $errorMessage .= "\n" . 'Error data: ' . $errorData;
+            $errorMessage = 'RPC error';
+            if (isset($error['code']) && is_int($error['code'])) {
+                $errorMessage .= ' (code ' . $error['code'] . ')';
             }
             $this->validate(true, $errorMessage);
         }
@@ -149,9 +140,9 @@ class jsonRPCClient
             throw new RuntimeException('Response Http Error - ' . $this->httpErrors[$httpCode]);
         }
         // check for curl error
-        if (0 < curl_errno($ch))
-        {
-            throw new RuntimeException('Unable to connect to '.$this->url . ' Error: ' . curl_error($ch));
+        $curlError = curl_errno($ch);
+        if ($curlError !== 0) {
+            throw new RuntimeException('RPC transport error (cURL ' . $curlError . '): ' . curl_strerror($curlError));
         }
         // close the connection
         if (PHP_VERSION_ID < 80000) {

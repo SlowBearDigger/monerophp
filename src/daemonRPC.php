@@ -525,14 +525,27 @@ class daemonRPC
    *
    *Flush Transaction Pool
    *
-   * @param $txids - array
-   * Optional, list of transactions IDs to flush from pool (all tx ids flushed if empty).
+   * @param string[]|array{txids: string[]}|\stdClass $txids Transaction IDs, optionally wrapped in a txids field.
+   * An empty list flushes the entire pool.
    *
    * @return status - string; General RPC error code. "OK" means everything looks good.
    */
     public function flush_txpool($txids)
     {
-        return $this->_run('flush_txpool', $txids);    
+        if ($txids instanceof \stdClass) {
+            $txids = $txids->txids ?? null;
+        } elseif (is_array($txids) && array_key_exists('txids', $txids)) {
+            $txids = $txids['txids'];
+        }
+        if (!is_array($txids)) {
+            throw new \InvalidArgumentException('Expected a list of transaction IDs');
+        }
+        foreach ($txids as $index => $txid) {
+            if (!is_int($index) || !is_string($txid)) {
+                throw new \InvalidArgumentException('Expected a list of transaction IDs');
+            }
+        }
+        return $this->_run('flush_txpool', array('txids' => array_values($txids)));
     }
  
     /**
